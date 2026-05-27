@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Mwnz.Api.Test/Mwnz.Api.Test.csproj" />
+  <Project Path="Mwnz.Api/Mwnz.Api.csproj" />
+</Solution>

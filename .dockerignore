@@ -1,0 +1,7 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/Mwnz.Api.Test
+**/*.md
+!README.md

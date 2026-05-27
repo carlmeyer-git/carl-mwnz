@@ -1,0 +1,19 @@
+@mwnz_api_HostAddress = http://localhost:5229
+
+GET {{mwnz_api_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{mwnz_api_HostAddress}}/v1/companies/1
+Accept: application/json
+
+###
+
+GET {{mwnz_api_HostAddress}}/v1/companies/2
+Accept: application/json
+
+###
+
+GET {{mwnz_api_HostAddress}}/v1/companies/999
+Accept: application/json

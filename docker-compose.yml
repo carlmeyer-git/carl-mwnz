@@ -1,0 +1,10 @@
+services:
+  mwnz-api:
+    build:
+      context: .
+      dockerfile: Mwnz.Api/Dockerfile
+    container_name: mwnz-api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
