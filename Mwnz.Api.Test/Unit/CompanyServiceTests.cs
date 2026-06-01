@@ -1,4 +1,5 @@
 using Moq;
+using Mwnz.Api.Integrations.XmlCompany;
 using Mwnz.Api.Models;
 using Mwnz.Api.Services;
 using Mwnz.Api.Test;
@@ -27,6 +28,10 @@ public class CompanyServiceTests
         var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
 
         var result = await service.GetCompanyAsync(2);
+
+        clientMock.Verify(
+            c => c.FetchCompanyXmlAsync(2, It.IsAny<CancellationToken>()),
+            Times.Once);
 
         Assert.Equal(CompanyResultKind.Success, result.Kind);
         Assert.NotNull(result.Company);

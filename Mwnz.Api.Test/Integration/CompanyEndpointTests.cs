@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Moq;
+using Mwnz.Api.Integrations.XmlCompany;
 using Mwnz.Api.Models;
-using Mwnz.Api.Services;
 using Mwnz.Api.Test;
 
 namespace Mwnz.Api.Test.Integration;
@@ -23,13 +23,14 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
     {
         _client = factory.CreateClient();
         _xmlCompanyClientMock = factory.XmlCompanyClientMock;
+        _xmlCompanyClientMock.Reset();
     }
 
     [Fact]
     public async Task GetCompany_ReturnsJsonMatchingOpenApiSpec()
     {
         _xmlCompanyClientMock
-            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.FetchCompanyXmlAsync(It.Is<int>(id => id == 1), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new XmlFetchResult(
                 XmlFetchStatus.Success,
                 """
@@ -49,13 +50,17 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
         Assert.Equal(1, company.Id);
         Assert.Equal("MWNZ", company.Name);
         Assert.Equal("..is awesome", company.Description);
+
+        _xmlCompanyClientMock.Verify(
+            c => c.FetchCompanyXmlAsync(1, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
     public async Task GetCompany_WhenXmlServiceReturnsNotFound_Returns404WithErrorBody()
     {
         _xmlCompanyClientMock
-            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.FetchCompanyXmlAsync(It.Is<int>(id => id == 404), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.NotFound));
 
         var response = await _client.GetAsync("/v1/companies/404");
@@ -66,6 +71,10 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
         Assert.NotNull(error);
         Assert.Equal("not_found", error.Error);
         Assert.False(string.IsNullOrWhiteSpace(error.ErrorDescription));
+
+        _xmlCompanyClientMock.Verify(
+            c => c.FetchCompanyXmlAsync(404, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -82,6 +91,22 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
         var error = await response.Content.ReadFromJsonAsync<ApiError>(JsonOptions);
         Assert.NotNull(error);
         Assert.Equal("upstream_error", error.Error);
+    }
+
+    [Fact]
+    public async Task GetCompany_WhenXmlIsInvalid_Returns502WithInvalidResponseError()
+    {
+        _xmlCompanyClientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.Success, "<not-valid-xml>"));
+
+        var response = await _client.GetAsync("/v1/companies/1");
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+
+        var error = await response.Content.ReadFromJsonAsync<ApiError>(JsonOptions);
+        Assert.NotNull(error);
+        Assert.Equal("invalid_response", error.Error);
     }
 
     [Fact]

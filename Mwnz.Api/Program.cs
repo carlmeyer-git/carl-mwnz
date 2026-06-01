@@ -1,3 +1,4 @@
+using Mwnz.Api.Integrations.XmlCompany;
 using Mwnz.Api.Configuration;
 using Mwnz.Api.Endpoints;
 using Mwnz.Api.Services;

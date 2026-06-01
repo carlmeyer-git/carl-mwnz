@@ -25,13 +25,13 @@ public static class CompanyEndpoints
     {
         var result = await companyService.GetCompanyAsync(id, cancellationToken);
 
+        // Upstream and parse failures both return 502; missing company returns 404.
         return result.Kind switch
         {
             CompanyResultKind.Success => Results.Ok(result.Company),
             CompanyResultKind.NotFound => Results.NotFound(result.Error),
             CompanyResultKind.UpstreamError or CompanyResultKind.InvalidResponse =>
-                Results.Json(result.Error, statusCode: StatusCodes.Status502BadGateway),
-            _ => Results.Json(result.Error, statusCode: StatusCodes.Status502BadGateway)
+                Results.Json(result.Error, statusCode: StatusCodes.Status502BadGateway)
         };
     }
 }

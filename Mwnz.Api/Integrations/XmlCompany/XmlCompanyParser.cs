@@ -1,11 +1,12 @@
 using System.Xml.Serialization;
 using Mwnz.Api.Models;
+using ExternalXmlCompany = Mwnz.Api.Integrations.XmlCompany.Models.XmlCompany;
 
-namespace Mwnz.Api.Services;
+namespace Mwnz.Api.Integrations.XmlCompany;
 
 public sealed class XmlCompanyParser : IXmlCompanyParser
 {
-    private static readonly XmlSerializer Serializer = new(typeof(XmlCompanyData));
+    private static readonly XmlSerializer Serializer = new(typeof(ExternalXmlCompany));
 
     public bool TryParse(string xml, out Company? company)
     {
@@ -19,7 +20,7 @@ public sealed class XmlCompanyParser : IXmlCompanyParser
         try
         {
             using var reader = new StringReader(xml);
-            if (Serializer.Deserialize(reader) is not XmlCompanyData data)
+            if (Serializer.Deserialize(reader) is not ExternalXmlCompany data)
             {
                 return false;
             }

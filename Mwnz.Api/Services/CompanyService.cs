@@ -1,3 +1,4 @@
+using Mwnz.Api.Integrations.XmlCompany;
 using Mwnz.Api.Models;
 
 namespace Mwnz.Api.Services;
@@ -18,6 +19,7 @@ public sealed class CompanyService(IXmlCompanyClient xmlClient, IXmlCompanyParse
             XmlFetchStatus.UpstreamError => new CompanyResult(CompanyResultKind.UpstreamError, Error: UpstreamError),
             XmlFetchStatus.Success when parser.TryParse(fetch.XmlContent!, out var company) =>
                 new CompanyResult(CompanyResultKind.Success, Company: company),
+            // HTTP succeeded but XML did not match the expected shape.
             _ => new CompanyResult(CompanyResultKind.InvalidResponse, Error: InvalidResponseError)
         };
     }

@@ -4,6 +4,7 @@ namespace Mwnz.Api.Endpoints;
 
 public static class OpenApiEndpoints
 {
+    // Embedded at build time from openapi-companies.yaml (see Mwnz.Api.csproj).
     private const string SpecResourceName = "Mwnz.Api.openapi-companies.yaml";
 
     public static void MapOpenApiEndpoints(this WebApplication app)

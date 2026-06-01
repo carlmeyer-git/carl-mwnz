@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using Mwnz.Api.Configuration;
 
-namespace Mwnz.Api.Services;
+namespace Mwnz.Api.Integrations.XmlCompany;
 
 public sealed class XmlCompanyClient(HttpClient httpClient, IOptions<XmlApiOptions> options) : IXmlCompanyClient
 {
@@ -17,6 +17,7 @@ public sealed class XmlCompanyClient(HttpClient httpClient, IOptions<XmlApiOptio
         {
             response = await httpClient.GetAsync(requestUri, cancellationToken);
         }
+        // HttpClient timeout surfaces as TaskCanceledException, not user cancellation.
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             return new XmlFetchResult(XmlFetchStatus.UpstreamError);
@@ -28,6 +29,7 @@ public sealed class XmlCompanyClient(HttpClient httpClient, IOptions<XmlApiOptio
 
         using (response)
         {
+            // Only 404 from the XML service maps to "company not found"; other errors are upstream failures.
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 return new XmlFetchResult(XmlFetchStatus.NotFound);

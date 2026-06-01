@@ -5,31 +5,42 @@ A small ASP.NET Core API that proxies the [MWNZ evaluation XML service](https://
 ## Repository structure
 
 ```
-carl-mwnz/
+├── .github/workflows/        # GitHub Actions (audit, Docker build, tests)
 ├── Mwnz.slnx                 # Solution file
 ├── docker-compose.yml        # Runs the mwnz-api container
 ├── openapi-companies.yaml    # Target API contract (from evaluation repo)
-├── Mwnz.Api/                  # ASP.NET Core Web API (Docker container: mwnz-api)
-│   ├── Configuration/        # App settings binding (XML upstream URL, timeout)
-│   ├── Endpoints/            # Minimal API route definitions
-│   ├── Models/               # Company, ApiError, XML DTOs
-│   ├── Services/             # HTTP client, XML parser, orchestration
+├── Mwnz.Api/                 # ASP.NET Core Web API (Docker container: mwnz-api)
+│   ├── Integrations/XmlCompany/   # Integration with the upstream XML API
+│   │   ├── Models/           # XmlCompany — external service XML shape
+│   │   ├── XmlCompanyClient.cs
+│   │   ├── XmlCompanyParser.cs
+│   │   └── …                 # IXmlCompanyClient, IXmlCompanyParser, XmlFetchResult
+│   ├── Configuration/        # XmlApiOptions (upstream URL, timeout)
+│   ├── Endpoints/            # Minimal API routes (companies, OpenAPI spec)
+│   ├── Models/               # API domain models (Company, ApiError)
+│   ├── Services/             # CompanyService — orchestration and error mapping
 │   ├── Dockerfile
 │   └── Program.cs
-└── Mwnz.Api.Test/            # xUnit test project
-    ├── Unit/                 # Parser and service tests (no HTTP server)
-    ├── Integration/          # Full HTTP pipeline via WebApplicationFactory
+└── Mwnz.Api.Test/            # xUnit + Moq
+    ├── Unit/                 # XmlCompanyClient, XmlCompanyParser, CompanyService
+    ├── Integration/          # HTTP endpoints via WebApplicationFactory
     └── TestCategories.cs     # Category names for filtered test runs
 ```
 
 ### How it works
 
-1. `GET /v1/companies/{id}` receives a request.
-2. `XmlCompanyClient` fetches `{XmlApi:BaseUrl}/{id}.xml` from GitHub (configurable).
-3. `XmlCompanyParser` deserializes the `<Data>` XML document.
+1. `GET /v1/companies/{id}` hits **Endpoints** → **CompanyService**.
+2. **XmlCompanyClient** (`Integrations/XmlCompany`) fetches `{XmlApi:BaseUrl}/{id}.xml` from GitHub (configurable).
+3. **XmlCompanyParser** deserializes the upstream `<Data>` document into `Integrations.XmlCompany.Models.XmlCompany`, then maps to the API `Company` model.
 4. JSON is returned matching the OpenAPI `Company` schema, or an `Error` body on failure.
 
-Upstream errors (network failure, non-success HTTP status, invalid XML) return **502** with an `error` / `error_description` payload. A missing company (XML service **404**) returns **404**.
+The evaluation OpenAPI document is embedded in the API assembly and served at `GET /openapi/v1.yaml` (`application/yaml`).
+
+| Condition | HTTP status | `error` code |
+|-----------|-------------|--------------|
+| Company not found (upstream **404**) | **404** | `not_found` |
+| Network / upstream HTTP failure | **502** | `upstream_error` |
+| Upstream OK but XML invalid | **502** | `invalid_response` |
 
 ## Prerequisites
 
@@ -53,6 +64,7 @@ Example requests:
 curl http://localhost:5229/v1/companies/1
 curl http://localhost:5229/v1/companies/2
 curl http://localhost:5229/health
+curl http://localhost:5229/openapi/v1.yaml
 ```
 
 ## Run with Docker
@@ -67,6 +79,9 @@ The API is available at **http://localhost:8080**.
 
 ```bash
 curl http://localhost:8080/v1/companies/1
+curl http://localhost:8080/v1/companies/2
+curl http://localhost:8080/health
+curl http://localhost:8080/openapi/v1.yaml
 ```
 
 To stop:
@@ -81,6 +96,8 @@ docker compose down
 docker build -f Mwnz.Api/Dockerfile -t mwnz-api .
 docker run --rm -p 8080:8080 mwnz-api
 ```
+
+The Docker build expects `openapi-companies.yaml` at the repository root (see `Mwnz.Api/Dockerfile`).
 
 ## Configuration
 
@@ -100,12 +117,12 @@ XmlApi__TimeoutSeconds=15
 
 ## Tests
 
-All tests live in **Mwnz.Api.Test**. Each test class is tagged with a **Category** trait so unit and integration suites can run independently.
+All tests live in **Mwnz.Api.Test**. Each test class is tagged with a **Category** trait. Upstream HTTP is mocked with [Moq](https://github.com/devlooped/moq) in unit and integration tests.
 
 | Category | What it covers |
 |----------|----------------|
-| `Unit` | XML parsing and `CompanyService` with a fake upstream client |
-| `Integration` | HTTP endpoints via `WebApplicationFactory` and a fake XML client |
+| `Unit` | `XmlCompanyClient` (HTTP handler stubs), `XmlCompanyParser`, `CompanyService` |
+| `Integration` | Full HTTP pipeline via `WebApplicationFactory` (company routes, health, OpenAPI spec) |
 
 ### Run all tests
 
@@ -125,11 +142,25 @@ dotnet test --filter "Category=Unit"
 dotnet test --filter "Category=Integration"
 ```
 
+## Continuous integration
+
+GitHub Actions workflow [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (**Build and Publish**) runs on pushes and pull requests to `main`:
+
+1. Check out the code
+2. Restore packages and run a .NET vulnerable-package audit
+3. Build the Docker image (`docker compose build`)
+4. Start the container, run `dotnet test`, then smoke-test the running API (`/health`, `/openapi/v1.yaml`, `/v1/companies/1` and `/2`)
+5. Placeholder step for future publish to a Docker registry
+
 ## API reference
 
-See [openapi-companies.yaml](./openapi-companies.yaml). Primary endpoint:
+The contract is defined in [openapi-companies.yaml](./openapi-companies.yaml). The running service exposes:
 
-- **GET** `/v1/companies/{id}` — company JSON (`id`, `name`, `description`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/v1/companies/{id}` | Company JSON (`id`, `name`, `description`) |
+| GET | `/openapi/v1.yaml` | OpenAPI 3.0 specification (YAML) |
+| GET | `/health` | Liveness check (`{"status":"healthy"}`) |
 
 ## Evaluation source
 

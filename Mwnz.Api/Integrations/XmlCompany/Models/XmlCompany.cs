@@ -1,9 +1,9 @@
 using System.Xml.Serialization;
 
-namespace Mwnz.Api.Models;
+namespace Mwnz.Api.Integrations.XmlCompany.Models;
 
 [XmlRoot("Data")]
-public sealed class XmlCompanyData
+public sealed class XmlCompany
 {
     [XmlElement("id")]
     public int Id { get; set; }

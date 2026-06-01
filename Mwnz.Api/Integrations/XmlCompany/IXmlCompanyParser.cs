@@ -1,6 +1,6 @@
 using Mwnz.Api.Models;
 
-namespace Mwnz.Api.Services;
+namespace Mwnz.Api.Integrations.XmlCompany;
 
 public interface IXmlCompanyParser
 {

@@ -1,4 +1,4 @@
-using Mwnz.Api.Services;
+using Mwnz.Api.Integrations.XmlCompany;
 using Mwnz.Api.Test;
 
 namespace Mwnz.Api.Test.Unit;
