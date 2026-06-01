@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Mwnz.Api.Services;
 
 namespace Mwnz.Api.Test.Integration;
 
 public sealed class MwnzApiWebApplicationFactory : WebApplicationFactory<Program>
 {
-    public FakeXmlCompanyClient FakeXmlClient { get; } = new();
+    public Mock<IXmlCompanyClient> XmlCompanyClientMock { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -22,22 +23,7 @@ public sealed class MwnzApiWebApplicationFactory : WebApplicationFactory<Program
                 services.Remove(descriptor);
             }
 
-            services.AddSingleton<IXmlCompanyClient>(FakeXmlClient);
+            services.AddSingleton(XmlCompanyClientMock.Object);
         });
-    }
-}
-
-public sealed class FakeXmlCompanyClient : IXmlCompanyClient
-{
-    public Func<int, XmlFetchResult>? FetchHandler { get; set; }
-
-    public Task<XmlFetchResult> FetchCompanyXmlAsync(int companyId, CancellationToken cancellationToken = default)
-    {
-        if (FetchHandler is null)
-        {
-            return Task.FromResult(new XmlFetchResult(XmlFetchStatus.UpstreamError));
-        }
-
-        return Task.FromResult(FetchHandler(companyId));
     }
 }

@@ -1,0 +1,66 @@
+name: Build and Publish
+
+on:
+  push:
+    branches:
+      - main      
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: .NET audit
+        run: |
+          dotnet restore Mwnz.slnx
+          dotnet list package --vulnerable --include-transitive
+
+      - name: Build Docker images
+        run: docker compose build
+
+      - name: Start API container
+        run: docker compose up -d
+
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy in time"
+          docker compose logs
+          exit 1
+
+      - name: Run tests against Docker image
+        run: |
+          dotnet test Mwnz.slnx --no-restore --verbosity normal
+
+          echo "Smoke testing containerized API..."
+          curl -sf http://localhost:8080/health | grep -q healthy
+          curl -sf http://localhost:8080/openapi/v1.yaml | grep -q 'openapi: "3.0.2"'
+          curl -sf http://localhost:8080/v1/companies/1 | grep -q MWNZ
+          curl -sf http://localhost:8080/v1/companies/2 | grep -q Other
+
+      - name: Stop API container
+        if: always()
+        run: docker compose down
+
+      - name: Publish to Docker registry
+        run: |
+          # Placeholder: configure registry login and image push (e.g. docker/login-action, docker/build-push-action)

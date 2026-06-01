@@ -1,3 +1,4 @@
+using Moq;
 using Mwnz.Api.Models;
 using Mwnz.Api.Services;
 using Mwnz.Api.Test;
@@ -18,8 +19,12 @@ public class CompanyServiceTests
     [Fact]
     public async Task GetCompanyAsync_Success_ReturnsCompany()
     {
-        var client = new FakeXmlCompanyClient(new XmlFetchResult(XmlFetchStatus.Success, ValidXml));
-        var service = new CompanyService(client, new XmlCompanyParser());
+        var clientMock = new Mock<IXmlCompanyClient>();
+        clientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.Success, ValidXml));
+
+        var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
 
         var result = await service.GetCompanyAsync(2);
 
@@ -32,8 +37,12 @@ public class CompanyServiceTests
     [Fact]
     public async Task GetCompanyAsync_NotFound_ReturnsNotFoundError()
     {
-        var client = new FakeXmlCompanyClient(new XmlFetchResult(XmlFetchStatus.NotFound));
-        var service = new CompanyService(client, new XmlCompanyParser());
+        var clientMock = new Mock<IXmlCompanyClient>();
+        clientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.NotFound));
+
+        var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
 
         var result = await service.GetCompanyAsync(99);
 
@@ -44,8 +53,12 @@ public class CompanyServiceTests
     [Fact]
     public async Task GetCompanyAsync_UpstreamError_ReturnsUpstreamError()
     {
-        var client = new FakeXmlCompanyClient(new XmlFetchResult(XmlFetchStatus.UpstreamError));
-        var service = new CompanyService(client, new XmlCompanyParser());
+        var clientMock = new Mock<IXmlCompanyClient>();
+        clientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.UpstreamError));
+
+        var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
 
         var result = await service.GetCompanyAsync(1);
 
@@ -56,18 +69,16 @@ public class CompanyServiceTests
     [Fact]
     public async Task GetCompanyAsync_InvalidXml_ReturnsInvalidResponse()
     {
-        var client = new FakeXmlCompanyClient(new XmlFetchResult(XmlFetchStatus.Success, "<bad>"));
-        var service = new CompanyService(client, new XmlCompanyParser());
+        var clientMock = new Mock<IXmlCompanyClient>();
+        clientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.Success, "<bad>"));
+
+        var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
 
         var result = await service.GetCompanyAsync(1);
 
         Assert.Equal(CompanyResultKind.InvalidResponse, result.Kind);
         Assert.Equal("invalid_response", result.Error!.Error);
-    }
-
-    private sealed class FakeXmlCompanyClient(XmlFetchResult result) : IXmlCompanyClient
-    {
-        public Task<XmlFetchResult> FetchCompanyXmlAsync(int companyId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(result);
     }
 }

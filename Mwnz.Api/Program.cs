@@ -5,8 +5,6 @@ using Mwnz.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<XmlApiOptions>(builder.Configuration.GetSection(XmlApiOptions.SectionName));
-builder.Services.AddOpenApi();
-
 builder.Services.AddSingleton<IXmlCompanyParser, XmlCompanyParser>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 
@@ -18,14 +16,10 @@ builder.Services.AddHttpClient<IXmlCompanyClient, XmlCompanyClient>((serviceProv
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
     .ExcludeFromDescription();
 
+app.MapOpenApiEndpoints();
 app.MapCompanyEndpoints();
 
 app.Run();

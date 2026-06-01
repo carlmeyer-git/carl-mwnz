@@ -1,6 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+COPY openapi-companies.yaml .
 COPY ["Mwnz.Api/Mwnz.Api.csproj", "Mwnz.Api/"]
 RUN dotnet restore "Mwnz.Api/Mwnz.Api.csproj"
 

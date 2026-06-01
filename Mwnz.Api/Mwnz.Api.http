@@ -5,6 +5,11 @@ Accept: application/json
 
 ###
 
+GET {{mwnz_api_HostAddress}}/openapi/v1.yaml
+Accept: application/yaml
+
+###
+
 GET {{mwnz_api_HostAddress}}/v1/companies/1
 Accept: application/json
 
