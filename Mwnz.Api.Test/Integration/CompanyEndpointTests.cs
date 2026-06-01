@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Moq;
 using Mwnz.Api.Models;
 using Mwnz.Api.Services;
 using Mwnz.Api.Test;
@@ -11,7 +12,7 @@ namespace Mwnz.Api.Test.Integration;
 public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
 {
     private readonly HttpClient _client;
-    private readonly FakeXmlCompanyClient _fakeXmlClient;
+    private readonly Mock<IXmlCompanyClient> _xmlCompanyClientMock;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -21,21 +22,23 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
     public CompanyEndpointTests(MwnzApiWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
-        _fakeXmlClient = factory.FakeXmlClient;
+        _xmlCompanyClientMock = factory.XmlCompanyClientMock;
     }
 
     [Fact]
     public async Task GetCompany_ReturnsJsonMatchingOpenApiSpec()
     {
-        _fakeXmlClient.FetchHandler = _ => new XmlFetchResult(
-            XmlFetchStatus.Success,
-            """
-            <Data>
-              <id>1</id>
-              <name>MWNZ</name>
-              <description>..is awesome</description>
-            </Data>
-            """);
+        _xmlCompanyClientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XmlFetchResult(
+                XmlFetchStatus.Success,
+                """
+                <Data>
+                  <id>1</id>
+                  <name>MWNZ</name>
+                  <description>..is awesome</description>
+                </Data>
+                """));
 
         var response = await _client.GetAsync("/v1/companies/1");
 
@@ -51,7 +54,9 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
     [Fact]
     public async Task GetCompany_WhenXmlServiceReturnsNotFound_Returns404WithErrorBody()
     {
-        _fakeXmlClient.FetchHandler = _ => new XmlFetchResult(XmlFetchStatus.NotFound);
+        _xmlCompanyClientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.NotFound));
 
         var response = await _client.GetAsync("/v1/companies/404");
 
@@ -66,7 +71,9 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
     [Fact]
     public async Task GetCompany_WhenXmlServiceFails_Returns502WithErrorBody()
     {
-        _fakeXmlClient.FetchHandler = _ => new XmlFetchResult(XmlFetchStatus.UpstreamError);
+        _xmlCompanyClientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.UpstreamError));
 
         var response = await _client.GetAsync("/v1/companies/1");
 
@@ -83,5 +90,19 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
         var response = await _client.GetAsync("/health");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpenApiSpec_ReturnsYamlMatchingContract()
+    {
+        var response = await _client.GetAsync("/openapi/v1.yaml");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/yaml", response.Content.Headers.ContentType?.MediaType);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("openapi: \"3.0.2\"", body);
+        Assert.Contains("/companies/{id}:", body);
+        Assert.Contains("MWNZ companies", body);
     }
 }

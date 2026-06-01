@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
+    <EmbeddedResource Include="..\openapi-companies.yaml" Link="openapi-companies.yaml" />
   </ItemGroup>
 
 </Project>
