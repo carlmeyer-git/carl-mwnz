@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  checks: write
 
 jobs:
   build-and-test:
@@ -47,20 +48,78 @@ jobs:
           docker compose logs
           exit 1
 
-      - name: Run tests against Docker image
+      - name: Run .NET tests
+        id: dotnet-test
         run: |
-          dotnet test Mwnz.slnx --no-restore --verbosity normal
+          dotnet test Mwnz.slnx --no-restore --verbosity normal \
+            --results-directory TestResults \
+            --logger "trx;LogFileName=test-results.trx"
 
-          echo "Smoke testing containerized API..."
-          curl -sf http://localhost:8080/health | grep -q healthy
-          curl -sf http://localhost:8080/openapi/v1.yaml | grep -q 'openapi: "3.0.2"'
-          curl -sf http://localhost:8080/v1/companies/1 | grep -q MWNZ
-          curl -sf http://localhost:8080/v1/companies/2 | grep -q Other
+      - name: Publish .NET test results
+        if: always() && !cancelled()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: TestResults/**/*.trx
+          check_name: .NET test results
+
+      - name: Smoke test containerized API
+        if: steps.dotnet-test.outcome == 'success'
+        run: |
+          {
+            echo "## Smoke tests"
+            echo ""
+            echo "| Check | Result |"
+            echo "|-------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          smoke() {
+            local name="$1"
+            shift
+            if "$@"; then
+              echo "| ${name} | Pass |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "| ${name} | Fail |" >> "$GITHUB_STEP_SUMMARY"
+              return 1
+            fi
+          }
+
+          smoke "GET /health" \
+            bash -c 'curl -sf http://localhost:8080/health | grep -q healthy'
+          smoke "GET /openapi/v1.yaml" \
+            bash -c 'curl -sf http://localhost:8080/openapi/v1.yaml | grep -q "openapi: \"3.0.2\""'
+          smoke "GET /v1/companies/1" \
+            bash -c 'curl -sf http://localhost:8080/v1/companies/1 | grep -q MWNZ'
+          smoke "GET /v1/companies/2" \
+            bash -c 'curl -sf http://localhost:8080/v1/companies/2 | grep -q Other'
 
       - name: Stop API container
         if: always()
         run: docker compose down
 
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Publish to Docker registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          # Placeholder: configure registry login and image push (e.g. docker/login-action, docker/build-push-action)
+          docker tag carlpetermeyer/mwnz-api:latest "carlpetermeyer/mwnz-api:${{ github.run_number }}"
+          docker push carlpetermeyer/mwnz-api:latest
+          docker push "carlpetermeyer/mwnz-api:${{ github.run_number }}"
+
+      - name: Published image summary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          {
+            echo "## Published Docker images"
+            echo ""
+            echo "| Image |"
+            echo "|-------|"
+            echo "| \`carlpetermeyer/mwnz-api:latest\` |"
+            echo "| \`carlpetermeyer/mwnz-api:${{ github.run_number }}\` |"
+            echo ""
+            echo "Hub: https://hub.docker.com/r/carlpetermeyer/mwnz-api"
+          } >> "$GITHUB_STEP_SUMMARY"

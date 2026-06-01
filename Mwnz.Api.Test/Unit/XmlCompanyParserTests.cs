@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Mwnz.Api.Integrations.XmlCompany;
 using Mwnz.Api.Test;
 
@@ -6,7 +7,7 @@ namespace Mwnz.Api.Test.Unit;
 [Trait("Category", TestCategories.Unit)]
 public class XmlCompanyParserTests
 {
-    private readonly XmlCompanyParser _parser = new();
+    private readonly XmlCompanyParser _parser = new(NullLogger<XmlCompanyParser>.Instance);
 
     [Fact]
     public void TryParse_ValidXml_ReturnsCompany()

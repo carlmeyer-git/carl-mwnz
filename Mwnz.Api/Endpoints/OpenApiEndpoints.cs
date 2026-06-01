@@ -1,6 +1,9 @@
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace Mwnz.Api.Endpoints;
+
+internal sealed class OpenApiEndpointLogs;
 
 public static class OpenApiEndpoints
 {
@@ -17,15 +20,17 @@ public static class OpenApiEndpoints
             .ExcludeFromDescription();
     }
 
-    private static IResult ServeOpenApiSpec()
+    private static IResult ServeOpenApiSpec(ILogger<OpenApiEndpointLogs> logger)
     {
         var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(SpecResourceName);
 
         if (stream is null)
         {
+            logger.LogError("OpenAPI spec resource {ResourceName} was not found", SpecResourceName);
             return Results.NotFound();
         }
 
+        logger.LogDebug("Serving OpenAPI spec from {ResourceName}", SpecResourceName);
         return Results.Stream(stream, "application/yaml");
     }
 }

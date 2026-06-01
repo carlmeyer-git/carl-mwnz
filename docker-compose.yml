@@ -1,5 +1,6 @@
 services:
   mwnz-api:
+    image: carlpetermeyer/mwnz-api:latest
     build:
       context: .
       dockerfile: Mwnz.Api/Dockerfile

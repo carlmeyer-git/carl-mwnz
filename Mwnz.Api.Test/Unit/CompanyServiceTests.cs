@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Mwnz.Api.Integrations.XmlCompany;
 using Mwnz.Api.Models;
@@ -25,7 +26,7 @@ public class CompanyServiceTests
             .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.Success, ValidXml));
 
-        var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
+        var service = new CompanyService(clientMock.Object, new XmlCompanyParser(NullLogger<XmlCompanyParser>.Instance), NullLogger<CompanyService>.Instance);
 
         var result = await service.GetCompanyAsync(2);
 
@@ -47,7 +48,7 @@ public class CompanyServiceTests
             .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.NotFound));
 
-        var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
+        var service = new CompanyService(clientMock.Object, new XmlCompanyParser(NullLogger<XmlCompanyParser>.Instance), NullLogger<CompanyService>.Instance);
 
         var result = await service.GetCompanyAsync(99);
 
@@ -63,7 +64,7 @@ public class CompanyServiceTests
             .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.UpstreamError));
 
-        var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
+        var service = new CompanyService(clientMock.Object, new XmlCompanyParser(NullLogger<XmlCompanyParser>.Instance), NullLogger<CompanyService>.Instance);
 
         var result = await service.GetCompanyAsync(1);
 
@@ -79,7 +80,7 @@ public class CompanyServiceTests
             .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new XmlFetchResult(XmlFetchStatus.Success, "<bad>"));
 
-        var service = new CompanyService(clientMock.Object, new XmlCompanyParser());
+        var service = new CompanyService(clientMock.Object, new XmlCompanyParser(NullLogger<XmlCompanyParser>.Instance), NullLogger<CompanyService>.Instance);
 
         var result = await service.GetCompanyAsync(1);
 

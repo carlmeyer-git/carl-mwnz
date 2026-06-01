@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Mwnz.Api.Integrations.XmlCompany;
 using Mwnz.Api.Configuration;
@@ -102,7 +103,7 @@ public class XmlCompanyClientTests
 
         var options = Options.Create(new XmlApiOptions { BaseUrl = $"{BaseUrl}/" });
         var httpClient = new HttpClient(handler);
-        var client = new XmlCompanyClient(httpClient, options);
+        var client = new XmlCompanyClient(httpClient, options, NullLogger<XmlCompanyClient>.Instance);
 
         await client.FetchCompanyXmlAsync(7);
 
@@ -110,7 +111,7 @@ public class XmlCompanyClientTests
     }
 
     private static XmlCompanyClient CreateClient(StubHttpMessageHandler handler) =>
-        new(new HttpClient(handler), Options.Create(new XmlApiOptions { BaseUrl = BaseUrl }));
+        new(new HttpClient(handler), Options.Create(new XmlApiOptions { BaseUrl = BaseUrl }), NullLogger<XmlCompanyClient>.Instance);
 
     private sealed class StubHttpMessageHandler(
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler)

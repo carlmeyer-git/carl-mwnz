@@ -94,6 +94,22 @@ public class CompanyEndpointTests : IClassFixture<MwnzApiWebApplicationFactory>
     }
 
     [Fact]
+    public async Task GetCompany_WhenUnhandledExceptionThrown_Returns500WithInternalError()
+    {
+        _xmlCompanyClientMock
+            .Setup(c => c.FetchCompanyXmlAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Simulated failure"));
+
+        var response = await _client.GetAsync("/v1/companies/1");
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        var error = await response.Content.ReadFromJsonAsync<ApiError>(JsonOptions);
+        Assert.NotNull(error);
+        Assert.Equal("internal_error", error.Error);
+    }
+
+    [Fact]
     public async Task GetCompany_WhenXmlIsInvalid_Returns502WithInvalidResponseError()
     {
         _xmlCompanyClientMock
