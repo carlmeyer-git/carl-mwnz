@@ -34,6 +34,49 @@ A small ASP.NET Core API that proxies the [MWNZ evaluation XML service](https://
 3. **XmlCompanyParser** deserializes the upstream `<Data>` document into `Integrations.XmlCompany.Models.XmlCompany`, then maps to the API `Company` model.
 4. JSON is returned matching the OpenAPI `Company` schema, or an `Error` body on failure.
 
+```mermaid
+sequenceDiagram
+    participant Caller as API client
+    participant EP as CompanyEndpoints
+    participant Svc as CompanyService
+    participant Http as XmlCompanyClient
+    participant XML as Upstream XML API
+    participant Parser as XmlCompanyParser
+
+    Caller->>EP: GET /v1/companies/{id}
+    EP->>Svc: GetCompanyAsync(id)
+    Svc->>Http: FetchCompanyXmlAsync(id)
+    Http->>XML: GET {BaseUrl}/{id}.xml
+
+    alt Company found
+        XML-->>Http: 200 + XML body
+        Http-->>Svc: Success + XML
+        Svc->>Parser: TryParse(xml)
+        Parser-->>Svc: Company
+        Svc-->>EP: Success
+        EP-->>Caller: 200 JSON Company
+    else Not found
+        XML-->>Http: 404
+        Http-->>Svc: NotFound
+        Svc-->>EP: NotFound
+        EP-->>Caller: 404 not_found
+    else Upstream failure
+        XML-->>Http: 5xx / timeout / network error
+        Http-->>Svc: UpstreamError
+        Svc-->>EP: UpstreamError
+        EP-->>Caller: 502 upstream_error
+    else Invalid XML
+        XML-->>Http: 200 + invalid XML
+        Http-->>Svc: Success + XML
+        Svc->>Parser: TryParse(xml)
+        Parser-->>Svc: parse failed
+        Svc-->>EP: InvalidResponse
+        EP-->>Caller: 502 invalid_response
+    end
+```
+
+Uncaught exceptions are logged by **GlobalExceptionHandler** and returned as **500** `internal_error`.
+
 The evaluation OpenAPI document is embedded in the API assembly and served at `GET /openapi/v1.yaml` (`application/yaml`).
 
 | Condition | HTTP status | `error` code |
