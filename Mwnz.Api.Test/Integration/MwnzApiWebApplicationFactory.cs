@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Mwnz.Api.Services;
+using Mwnz.Api.Integrations.XmlCompany;
 
 namespace Mwnz.Api.Test.Integration;
 
