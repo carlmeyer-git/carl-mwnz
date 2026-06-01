@@ -165,9 +165,8 @@ The single job `build-and-test` runs on `ubuntu-latest` and performs these steps
 4. **Build Docker images** — `docker compose build` (image `carlpetermeyer/mwnz-api:latest`, see [docker-compose.yml](./docker-compose.yml)).
 5. **Start API container** — `docker compose up -d` on port 8080.
 6. **Wait for API** — poll `GET /health` for up to ~60 seconds.
-7. **Run .NET tests** — `dotnet test Mwnz.slnx` with TRX output under `TestResults/`.
-8. **Publish .NET test results** — uploads TRX to a GitHub check named **“.NET test results”** (runs even when tests fail, unless the job is cancelled).
-9. **Smoke test containerized API** — HTTP checks against the running container (only if unit/integration tests passed):
+7. **Run .NET tests** — `dotnet test Mwnz.slnx`.
+8. **Smoke test containerized API** — HTTP checks against the running container (only if unit/integration tests passed):
 
    | Check | Expectation |
    |-------|-------------|
@@ -176,8 +175,8 @@ The single job `build-and-test` runs on `ubuntu-latest` and performs these steps
    | `GET /v1/companies/1` | Response contains `MWNZ` |
    | `GET /v1/companies/2` | Response contains `Other` |
 
-10. **Stop API container** — `docker compose down` (always runs).
-11. **Publish to Docker Hub** (push to `main` only) — log in, tag with the workflow run number, and push both tags:
+9. **Stop API container** — `docker compose down` (always runs).
+10. **Publish to Docker Hub** (push to `main` only) — log in, tag with the workflow run number, and push both tags:
 
     - `carlpetermeyer/mwnz-api:latest`
     - `carlpetermeyer/mwnz-api:<run_number>` — monotonic build number from [`github.run_number`](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context)
@@ -185,7 +184,6 @@ The single job `build-and-test` runs on `ubuntu-latest` and performs these steps
 ### Viewing results
 
 - **Summary** (Actions run → *Summary*): smoke-test table; on `main` pushes, a table of published image tags and a link to [Docker Hub](https://hub.docker.com/r/carlpetermeyer/mwnz-api).
-- **Checks**: the **“.NET test results”** check lists passed/failed tests (visible on the run and on pull requests).
 
 ### Docker Hub secrets
 

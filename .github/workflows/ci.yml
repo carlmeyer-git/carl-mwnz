@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  checks: write
 
 jobs:
   build-and-test:
@@ -50,17 +49,7 @@ jobs:
 
       - name: Run .NET tests
         id: dotnet-test
-        run: |
-          dotnet test Mwnz.slnx --no-restore --verbosity normal \
-            --results-directory TestResults \
-            --logger "trx;LogFileName=test-results.trx"
-
-      - name: Publish .NET test results
-        if: always() && !cancelled()
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: TestResults/**/*.trx
-          check_name: .NET test results
+        run: dotnet test Mwnz.slnx --no-restore --verbosity normal
 
       - name: Smoke test containerized API
         if: steps.dotnet-test.outcome == 'success'
